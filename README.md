@@ -1,2 +1,2 @@
-# Patterns-Trends-ZHAW
-Solving exercise 2
+# Patterns-Trends_ZHAW
+Exercises
