@@ -1,2 +1,2 @@
 # Patterns-Trends_ZHAW
-Exercises
+Exercises 1-5
