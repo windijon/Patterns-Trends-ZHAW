@@ -5,7 +5,6 @@ date: '2022-04-29'
 output: html_document
 ---
 
-
 ### Task 1: Import your data
 
 Load the necessary libraries
@@ -29,5 +28,71 @@ wildschwein_BE <- read_delim("wildschwein_BE_2056.csv",",") # adjust path
 View(wildschwein_BE)
 
 wildschwein_BE <- st_as_sf(wildschwein_BE, coords = c("E", "N"), crs = 2056, remove = FALSE)
+wildschwein_BE
+
+```
+
+### Task 2: Getting an overview
+
+Calculate the time-lag between subsequent positions
+
+```{r}
+
+wildschwein <- mutate(wildschwein_BE,timelag = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"))
+wildschwein
+
+```
+
+How many individuals were tracked?
+
+```{r}
+
+wildschwein <- group_by(wildschwein,TierID)
+wildschwein
+
+wildschwein %>% 
+  group_keys()  %>% 
+  nrow()
+
+```
+
+For how long were the individual tracked? Are there gaps? Were all individuals tracked concurrently or sequentially?
+
+```{r}
+
+ggplot(data = wildschwein, aes(x = DatetimeUTC, y = TierID)) +
+  geom_line()
+
+ggplot(data = wildschwein, aes(x = TierID, y = timelag)) +
+  geom_boxplot()
+
+# find and replace outliers with NA
+wildschwein$timelag[wildschwein$timelag<=0]<-NA
+
+ggplot(data = wildschwein, aes(x = TierID, y = timelag)) +
+  geom_boxplot()
+
+wildschwein %>%
+  group_by(TierID) %>%
+  summarise(         
+    max = max(DatetimeUTC),
+    min = min(DatetimeUTC),
+    total_timelag = difftime(time1 = max, time2 = min),
+    mean_timelag = mean(timelag, na.rm = T),
+    sd_timelag = sd(timelag, na.rm = T),
+    timelag_gabs = sum(is.na(timelag)))
+
+```
+
+What is the temporal sampling interval between the locations?
+
+```{r}
+
+ggplot(data = wildschwein, aes(x = timelag)) +
+  geom_histogram(bins = 100)
+
+ggplot(data = wildschwein, aes(x = timelag)) +
+  geom_histogram(bins = 200) + 
+  scale_x_continuous(limits=c(0,4000))
 
 ```
