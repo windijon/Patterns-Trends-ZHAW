@@ -7,7 +7,7 @@ output: html_document
 
 ### Task 1: Import your data
 
-Load the necessary libraries
+Load the necessary libraries.
 
 ```{r}
 
@@ -20,7 +20,7 @@ library(lubridate)    # To handle dates and times
 
 ```
 
-Import the downloaded csv and create a Spatial Object
+Import the downloaded csv and create a Spatial Object.
 
 ```{r}
 
@@ -34,11 +34,11 @@ wildschwein_BE
 
 ### Task 2: Getting an overview
 
-Calculate the time-lag between subsequent positions
+Calculate the time-lag between subsequent positions.
 
 ```{r}
 
-wildschwein <- mutate(wildschwein_BE,timelag = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"))
+wildschwein <- mutate(wildschwein_BE,timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"))
 wildschwein
 
 ```
@@ -50,9 +50,10 @@ How many individuals were tracked?
 wildschwein <- group_by(wildschwein,TierID)
 wildschwein
 
-wildschwein %>% 
+nr_individual <- wildschwein %>% 
   group_keys()  %>% 
   nrow()
+nr_individual
 
 ```
 
@@ -63,24 +64,25 @@ For how long were the individual tracked? Are there gaps? Were all individuals t
 ggplot(data = wildschwein, aes(x = DatetimeUTC, y = TierID)) +
   geom_line()
 
-ggplot(data = wildschwein, aes(x = TierID, y = timelag)) +
+ggplot(data = wildschwein, aes(x = TierID, y = timelag_s)) +
   geom_boxplot()
 
 # find and replace outliers with NA
-wildschwein$timelag[wildschwein$timelag<=0]<-NA
+wildschwein$timelag_s[wildschwein$timelag_s<=0]<-NA
 
-ggplot(data = wildschwein, aes(x = TierID, y = timelag)) +
+ggplot(data = wildschwein, aes(x = TierID, y = timelag_s)) +
   geom_boxplot()
 
-wildschwein %>%
+summary <- wildschwein %>%
   group_by(TierID) %>%
   summarise(         
     max = max(DatetimeUTC),
     min = min(DatetimeUTC),
     total_timelag = difftime(time1 = max, time2 = min),
-    mean_timelag = mean(timelag, na.rm = T),
-    sd_timelag = sd(timelag, na.rm = T),
-    timelag_gabs = sum(is.na(timelag)))
+    mean_timelag = mean(timelag_s, na.rm = T),
+    sd_timelag = sd(timelag_s, na.rm = T),
+    timelag_gabs = sum(is.na(timelag_s)))
+summary
 
 ```
 
@@ -88,11 +90,27 @@ What is the temporal sampling interval between the locations?
 
 ```{r}
 
-ggplot(data = wildschwein, aes(x = timelag)) +
+ggplot(data = wildschwein, aes(x = timelag_s)) +
   geom_histogram(bins = 100)
 
-ggplot(data = wildschwein, aes(x = timelag)) +
+ggplot(data = wildschwein, aes(x = timelag_s)) +
   geom_histogram(bins = 200) + 
   scale_x_continuous(limits=c(0,4000))
 
 ```
+
+
+### Task 3: Deriving movement parameters I: Speed
+
+Calculate the Euclidean distance (steplength) and the speed.
+
+```{r}
+
+wildschwein <- wildschwein %>%
+  mutate(steplength_m = sqrt((E-lead(E,1))^2 + (N-lead(N,1))^2),
+         speed_m_s = steplength_m / timelag_s)
+
+View(wildschwein)
+
+```
+
