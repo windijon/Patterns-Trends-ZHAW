@@ -20,11 +20,11 @@ library(lubridate)    # To handle dates and times
 
 ```
 
-Import the downloaded csv and create a Spatial Object.
+Import the wild-boar data "wildschwein_BE_2056" as csv and create a Spatial Object.
 
 ```{r}
 
-wildschwein_BE <- read_delim("wildschwein_BE_2056.csv",",") # adjust path
+wildschwein_BE <- read_delim("wildschwein_BE_2056.csv",",")
 View(wildschwein_BE)
 
 wildschwein_BE <- st_as_sf(wildschwein_BE, coords = c("E", "N"), crs = 2056, remove = FALSE)
@@ -111,6 +111,115 @@ wildschwein <- wildschwein %>%
          speed_m_s = steplength_m / timelag_s)
 
 View(wildschwein)
+
+```
+
+
+### Task 4: Cross-scale movement analysis
+
+Import the wild-boar data "Caro60" as csv. Reduce the granularity of our sampling interval by selecting every 3rd, 6th and 9th position.
+
+```{r}
+
+caro_st <- read_delim("caro60.csv",",")
+View(caro_st)
+
+caro <- st_as_sf(caro_st, coords = c("E", "N"), crs = 2056, remove = FALSE)
+caro
+
+seq_3 <- seq(from = 1, to = nrow(caro), by = 3)
+caro_3 <- slice(.data = caro, n = seq_3)
+
+seq_6 <- seq(from = 1, to = nrow(caro), by = 6)
+caro_6 <- slice(.data = caro, n = seq_6)
+
+seq_9 <- seq(from = 1, to = nrow(caro), by = 9)
+caro_9 <- slice(.data = caro, n = seq_9)
+
+nrow(caro)
+nrow(caro_3)
+nrow(caro_6)
+nrow(caro_9)
+
+```
+
+Calculate timelag, steplength and speed.
+
+```{r}
+
+caro <- caro %>%
+  mutate(timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"),
+         steplength_m = sqrt((E-lead(E,1))^2 + (N-lead(N,1))^2),
+         speed_m_s = steplength_m / timelag_s,
+         Trajectory = "1 minutes")
+caro
+
+caro_3 <- caro_3 %>%
+  mutate(timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"),
+         steplength_m = sqrt((E-lead(E,1))^2 + (N-lead(N,1))^2),
+         speed_m_s = steplength_m / timelag_s,
+         Trajectory = "3 minutes")
+caro_3
+
+caro_6 <- caro_6 %>%
+  mutate(timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"),
+         steplength_m = sqrt((E-lead(E,1))^2 + (N-lead(N,1))^2),
+         speed_m_s = steplength_m / timelag_s,
+         Trajectory = "6 minutes")
+caro_6
+
+caro_9 <- caro_9 %>%
+  mutate(timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"),
+         steplength_m = sqrt((E-lead(E,1))^2 + (N-lead(N,1))^2),
+         speed_m_s = steplength_m / timelag_s,
+         Trajectory = "9 minutes")
+caro_9
+
+caro_merge <- rbind(caro, caro_3, caro_6, caro_9)
+
+```
+
+Compare the speeds visually in a line plot and  visualize the trajectories in a map.
+
+```{r}
+
+Caro_speed <- ggplot(data = caro_merge) +
+  geom_line(aes(x = DatetimeUTC, y = speed_m_s, color = Trajectory)) +
+  labs(y = "Speed [m/s]", x = "Time") +
+  theme_minimal()
+Caro_speed
+
+Caro_1_3 <- ggplot(data = subset(caro_merge, caro_merge$Trajectory == "1 minutes"), aes(x = E, y = N, color = Trajectory)) +
+  geom_path(alpha = 0.4) +
+  geom_point(alpha = 0.4) +
+  geom_path(data = subset(caro_merge, caro_merge$Trajectory == "3 minutes"), alpha = 0.8) +
+  geom_point(data = subset(caro_merge, caro_merge$Trajectory == "3 minutes"), alpha = 0.8) + 
+  ggtitle("Comparing original- with 3 minutes-resampled data") +
+  theme_minimal()
+Caro_1_3
+
+Caro_1_6 <- ggplot(data = subset(caro_merge, caro_merge$Trajectory == "1 minutes"), aes(x = E, y = N, color = Trajectory)) +
+  geom_path(alpha = 0.4) +
+  geom_point(alpha = 0.4) +
+  geom_path(data = subset(caro_merge, caro_merge$Trajectory == "6 minutes"), alpha = 0.8) +
+  geom_point(data = subset(caro_merge, caro_merge$Trajectory == "6 minutes"), alpha = 0.8) + 
+  ggtitle("Comparing original- with 6 minutes-resampled data") +
+  theme_minimal()
+Caro_1_6
+
+Caro_1_9 <- ggplot(data = subset(caro_merge, caro_merge$Trajectory == "1 minutes"), aes(x = E, y = N, color = Trajectory)) +
+  geom_path(alpha = 0.4) +
+  geom_point(alpha = 0.4) +
+  geom_path(data = subset(caro_merge, caro_merge$Trajectory == "9 minutes"), alpha = 0.8) +
+  geom_point(data = subset(caro_merge, caro_merge$Trajectory == "9 minutes"), alpha = 0.8) + 
+  ggtitle("Comparing original- with 9 minutes-resampled data") +
+  theme_minimal()
+Caro_1_9
+
+ggsave(plot = Caro_speed, filename = "Caro_Speed.pdf", width = 17, height = 14, units = "cm", dpi = 5000)
+ggsave(plot = Caro_1_3, filename = "Caro_1_3.pdf", width = 17, height = 14, units = "cm", dpi = 5000)
+ggsave(plot = Caro_1_6, filename = "Caro_1_6.pdf", width = 17, height = 14, units = "cm", dpi = 5000)
+ggsave(plot = Caro_1_9, filename = "Caro_1_9.pdf", width = 17, height = 14, units = "cm", dpi = 5000)
 
 ```
 
