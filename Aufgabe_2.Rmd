@@ -2,14 +2,16 @@
 title: "Aufgabe 2"
 author: "windijon"
 date: '2022-04-29'
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ### Task 1: Import your data
 
 Load the necessary libraries.
 
-```{r}
+```{r message = FALSE}
 
 library(readr)        # to import tabular data (e.g. csv)
 library(dplyr)        # to manipulate (tabular) data
@@ -22,10 +24,10 @@ library(lubridate)    # To handle dates and times
 
 Import the wild-boar data "wildschwein_BE_2056" as csv and create a Spatial Object.
 
-```{r}
+```{r message = FALSE}
 
 wildschwein_BE <- read_delim("wildschwein_BE_2056.csv",",")
-View(wildschwein_BE)
+wildschwein_BE
 
 wildschwein_BE <- st_as_sf(wildschwein_BE, coords = c("E", "N"), crs = 2056, remove = FALSE)
 wildschwein_BE
@@ -36,7 +38,7 @@ wildschwein_BE
 
 Calculate the time-lag between subsequent positions.
 
-```{r}
+```{r message = FALSE}
 
 wildschwein <- mutate(wildschwein_BE,timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"))
 wildschwein
@@ -45,7 +47,7 @@ wildschwein
 
 How many individuals were tracked?
 
-```{r}
+```{r message = FALSE}
 
 wildschwein <- group_by(wildschwein,TierID)
 wildschwein
@@ -59,7 +61,7 @@ nr_individual
 
 For how long were the individual tracked? Are there gaps? Were all individuals tracked concurrently or sequentially?
 
-```{r}
+```{r message = FALSE, warning=FALSE}
 
 ggplot(data = wildschwein, aes(x = DatetimeUTC, y = TierID)) +
   geom_line()
@@ -88,7 +90,7 @@ summary
 
 What is the temporal sampling interval between the locations?
 
-```{r}
+```{r message = FALSE, warning=FALSE}
 
 ggplot(data = wildschwein, aes(x = timelag_s)) +
   geom_histogram(bins = 100)
@@ -103,13 +105,13 @@ ggplot(data = wildschwein, aes(x = timelag_s)) +
 
 Calculate the Euclidean distance (step-length) and the speed.
 
-```{r}
+```{r message = FALSE}
 
 wildschwein <- wildschwein %>%
   mutate(steplength_m = sqrt((E-lead(E,1))^2 + (N-lead(N,1))^2),
          speed_m_s = steplength_m / timelag_s)
 
-View(wildschwein)
+wildschwein
 
 ```
 
@@ -117,10 +119,10 @@ View(wildschwein)
 
 Import the wild-boar data "Caro60" as csv. Reduce the granularity of our sampling interval by selecting every 3rd, 6th and 9th position.
 
-```{r}
+```{r message = FALSE}
 
 caro_st <- read_delim("caro60.csv",",")
-View(caro_st)
+caro_st
 
 caro <- st_as_sf(caro_st, coords = c("E", "N"), crs = 2056, remove = FALSE)
 caro
@@ -143,7 +145,7 @@ nrow(caro_9)
 
 Calculate time-lag, step-length and speed.
 
-```{r}
+```{r message = FALSE}
 
 caro_1 <- caro %>%
   mutate(timelag_s = as.integer(difftime(time1 = lead(DatetimeUTC), time2 = DatetimeUTC), units = "secs"),
@@ -179,7 +181,7 @@ caro_merge <- rbind(caro_1, caro_3, caro_6, caro_9)
 
 Compare the speeds visually in a line plot and visualize the trajectories in a map.
 
-```{r}
+```{r message = FALSE, warning=FALSE}
 
 Caro_speed_Cross_Scale <- ggplot(data = caro_merge) +
   geom_line(aes(x = DatetimeUTC, y = speed_m_s, color = Trajectory)) +
@@ -227,7 +229,7 @@ ggsave(plot = Caro_1_9, filename = "Caro_1_9.pdf", width = 17, height = 14, unit
 
 Install "zoo" package, load it into the session and use the function rollmean() to smooth the calculated speed
 
-```{r}
+```{r message = FALSE, warning=FALSE}
 
 library(zoo)
 
