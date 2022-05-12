@@ -1,2 +1,3 @@
 # Patterns-Trends_ZHAW
-Exercises 1-5
+FS 22
+Exercise 2: Task 1-5
